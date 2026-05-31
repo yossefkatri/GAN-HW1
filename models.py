@@ -93,10 +93,10 @@ class DCDiscriminator(nn.Module):
 
     def __init__(self, conv_dim=64, norm='instance'):
         super().__init__()
-        self.conv1 = conv(in_channels=3, out_channels=32, kernel_size=4, norm='instance', activ='relu')
-        self.conv2 = conv(in_channels=32, out_channels=64, kernel_size=4, norm='instance', activ='relu')
-        self.conv3 = conv(in_channels=64, out_channels=128, kernel_size=4, norm='instance', activ='relu')
-        self.conv4 = conv(in_channels=128, out_channels=256, kernel_size=4, norm='instance', activ='relu')
+        self.conv1 = conv(in_channels=3, out_channels=32, kernel_size=4, norm=norm, activ='relu')
+        self.conv2 = conv(in_channels=32, out_channels=64, kernel_size=4, norm=norm, activ='relu')
+        self.conv3 = conv(in_channels=64, out_channels=128, kernel_size=4, norm=norm, activ='relu')
+        self.conv4 = conv(in_channels=128, out_channels=256, kernel_size=4, norm=norm, activ='relu')
         self.conv5 = conv(in_channels=256, out_channels=1, kernel_size=4, norm=None)
 
     def forward(self, x):
@@ -136,7 +136,7 @@ class DCGenerator(nn.Module):
         # to up_conv and choose kernel_size and padding accordingly.
         # ---------------------------------------------------------------
 
-        self.up_conv1 = up_conv(in_channels=100, out_channels=256, kernel_size=2, stride=1, padding=2, scale_factor=1,
+        self.up_conv1 = up_conv(in_channels=noise_size, out_channels=256, kernel_size=2, stride=1, padding=2, scale_factor=1,
                                 norm='instance', activ='relu')  # TODO verify
 
         self.up_conv2 = up_conv(in_channels=256, out_channels=128, kernel_size=3, stride=1, padding=1, scale_factor=2,
@@ -161,7 +161,7 @@ class DCGenerator(nn.Module):
         ------
             out: (BS, channels, image_width, image_height)
         """
-        o1 = self.conv1(x)
+        o1 = self.conv1(z)
         o2 = self.conv2(o1)
         o3 = self.conv3(o2)
         o4 = self.conv4(o3)

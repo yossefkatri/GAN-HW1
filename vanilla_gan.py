@@ -14,6 +14,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import wandb
+from sympy import discriminant
 
 import utils
 from data_loader import get_data_loader
@@ -65,7 +66,7 @@ def create_image_grid(array, ncols=None):
     for i in range(nrows):
         for j in range(ncols):
             result[i * cell_h:(i + 1) * cell_h,
-                   j * cell_w:(j + 1) * cell_w, :] = \
+            j * cell_w:(j + 1) * cell_w, :] = \
                 array[i * ncols + j].transpose(1, 2, 0)
     return result.squeeze() if channels == 1 else result
 
@@ -77,12 +78,10 @@ def checkpoint(iteration, G, D, opts):
                os.path.join(opts.checkpoint_dir, f'D_iter{iteration}.pkl'))
 
 
-
-
 def to_uint8_grid(images):
     """Convert (N, C, H, W) tensor/array with values in [-1,1] to uint8 grid."""
-    arr = utils.to_data(images)          # -> numpy (N, C, H, W)
-    grid = create_image_grid(arr)        # -> (H, W, C) in [-1, 1]
+    arr = utils.to_data(images)  # -> numpy (N, C, H, W)
+    grid = create_image_grid(arr)  # -> (H, W, C) in [-1, 1]
     return np.uint8(255 * (grid + 1) / 2)
 
 
@@ -121,13 +120,11 @@ def prepare_images(images, opts):
     return images
 
 
-
 # ---------------------------------------------------------------------------
 # Training loop
 # ---------------------------------------------------------------------------
 
 def training_loop(train_dataloader, opts):
-
     G, D = create_model(opts)
 
     g_optimizer = optim.Adam(G.parameters(), opts.lr, [opts.beta1, opts.beta2])
@@ -142,7 +139,6 @@ def training_loop(train_dataloader, opts):
 
     iteration = 1
     total_train_iters = opts.num_epochs * len(train_dataloader)
-
     for _ in range(opts.num_epochs):
         for batch in train_dataloader:
 
@@ -154,23 +150,16 @@ def training_loop(train_dataloader, opts):
 
             # 1. Discriminator loss on real images: (D(x) - 1)^2
             real_images_processed = prepare_images(real_images, opts)
-
-            # ------------------------------------------------------------------
-            # TODO 1.4 – compute D_real_loss using real_images_processed.
-            # ------------------------------------------------------------------
-            D_real_loss = None  # TODO
+            output = D.forward(real_images_processed)
+            scores = output.view(-1)
+            ones = torch.ones_like(scores)
+            D_real_loss = torch.sum((scores - ones) ** 2)
 
             # 2. Sample a batch of noise vectors z.
-            # ------------------------------------------------------------------
-            # TODO 1.4 – sample noise.
-            # ------------------------------------------------------------------
-            noise = None  # TODO
+            sampled_noise = sample_noise(opts.batch_size, opts.noise_size)
 
             # 3. Generate fake images G(z).
-            # ------------------------------------------------------------------
-            # TODO 1.4 – generate fake_images from the noise.
-            # ------------------------------------------------------------------
-            fake_images = None  # TODO
+            fake_images = G.forward(sampled_noise)
 
             # 4. Discriminator loss on fake images: (D(G(z)))^2
             # Note:
@@ -178,11 +167,9 @@ def training_loop(train_dataloader, opts):
             # update do not flow back into the generator parameters.
 
             fake_images_processed = prepare_images(fake_images.detach(), opts)
-
-            # ------------------------------------------------------------------
-            # TODO 1.4 – compute D_fake_loss using fake_images_processed.
-            # ------------------------------------------------------------------
-            D_fake_loss = None  # TODO
+            output = D.forward(fake_images_processed)
+            scores = output.view(-1)
+            D_fake_loss = torch.sum(scores ** 2)
 
             # 5. Total discriminator loss and update step.
             D_total_loss = (D_real_loss + D_fake_loss) / 2
@@ -195,24 +182,18 @@ def training_loop(train_dataloader, opts):
             # ==============================================================
 
             # 1. Sample a fresh batch of noise vectors z.
-            # ------------------------------------------------------------------
-            # TODO 1.4 – sample new noise. Do not reuse the discriminator noise.
-            # ------------------------------------------------------------------
-            noise = None  # TODO
+            noise = sample_noise(opts.batch_size, opts.noise_size)
 
             # 2. Generate fake images G(z).
-            # ------------------------------------------------------------------
-            # TODO 1.4 – generate fake_images from the noise.
-            # ------------------------------------------------------------------
-            fake_images = None  # TODO
+            fake_images = G.forward(noise)
 
             # 3. Generator loss: (D(G(z)) - 1)^2
             fake_images_processed = prepare_images(fake_images, opts)
+            output = D.forward(fake_images_processed)
+            scores = output.view(-1)
+            ones = torch.ones_like(scores)
+            G_loss = torch.mean((scores - ones) ** 2)
 
-            # ------------------------------------------------------------------
-            # TODO 1.4 – compute G_loss using fake_images_processed.
-            # ------------------------------------------------------------------
-            G_loss = None  # TODO
 
             g_optimizer.zero_grad()
             G_loss.backward()
@@ -250,6 +231,7 @@ def training_loop(train_dataloader, opts):
     # ------------------------------------------------------------------
     pass
 
+
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -266,28 +248,28 @@ def create_parser():
 
     # Model
     parser.add_argument('--image_size', type=int, default=64)
-    parser.add_argument('--conv_dim',   type=int, default=64)
+    parser.add_argument('--conv_dim', type=int, default=64)
     parser.add_argument('--noise_size', type=int, default=100)
 
     # Training
-    parser.add_argument('--num_epochs',       type=int,   default=500)
-    parser.add_argument('--batch_size',       type=int,   default=16)
-    parser.add_argument('--num_workers',      type=int,   default=2)
-    parser.add_argument('--lr',               type=float, default=0.0002)
-    parser.add_argument('--beta1',            type=float, default=0.5)
-    parser.add_argument('--beta2',            type=float, default=0.999)
+    parser.add_argument('--num_epochs', type=int, default=500)
+    parser.add_argument('--batch_size', type=int, default=16)
+    parser.add_argument('--num_workers', type=int, default=2)
+    parser.add_argument('--lr', type=float, default=0.0002)
+    parser.add_argument('--beta1', type=float, default=0.5)
+    parser.add_argument('--beta2', type=float, default=0.999)
 
     # Data
-    parser.add_argument('--data',            type=str, default='cat/grumpifyBprocessed')
+    parser.add_argument('--data', type=str, default='cat/grumpifyBprocessed')
     parser.add_argument('--data_preprocess', type=str, default='vanilla')
-    parser.add_argument('--use_diffaug',     action='store_true')
-    parser.add_argument('--ext',             type=str, default='*.png')
+    parser.add_argument('--use_diffaug', action='store_true')
+    parser.add_argument('--ext', type=str, default='*.png')
 
     # Directories / intervals
-    parser.add_argument('--checkpoint_dir',   type=str, default='./checkpoints_vanilla')
-    parser.add_argument('--sample_dir',       type=str, default='./vanilla')
-    parser.add_argument('--log_step',         type=int, default=10)
-    parser.add_argument('--sample_every',     type=int, default=200)
+    parser.add_argument('--checkpoint_dir', type=str, default='./checkpoints_vanilla')
+    parser.add_argument('--sample_dir', type=str, default='./vanilla')
+    parser.add_argument('--log_step', type=int, default=10)
+    parser.add_argument('--sample_every', type=int, default=200)
     parser.add_argument('--checkpoint_every', type=int, default=400)
 
     return parser

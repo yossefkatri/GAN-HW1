@@ -13,6 +13,7 @@ import imageio
 import numpy as np
 import torch
 import torch.optim as optim
+import torch.nn as nn
 import wandb
 from sympy import discriminant
 
@@ -151,9 +152,10 @@ def training_loop(train_dataloader, opts):
             # 1. Discriminator loss on real images: (D(x) - 1)^2
             real_images_processed = prepare_images(real_images, opts)
             output = D.forward(real_images_processed)
+            criterion = nn.MSELoss(reduction='sum')
             scores = output.view(-1)
             ones = torch.ones_like(scores)
-            D_real_loss = torch.sum((scores - ones) ** 2)
+            D_real_loss = criterion(scores, ones)
 
             # 2. Sample a batch of noise vectors z.
             sampled_noise = sample_noise(opts.batch_size, opts.noise_size)
@@ -165,7 +167,6 @@ def training_loop(train_dataloader, opts):
             # Note:
             # We detach fake_images so that gradients from the discriminator
             # update do not flow back into the generator parameters.
-
             fake_images_processed = prepare_images(fake_images.detach(), opts)
             output = D.forward(fake_images_processed)
             scores = output.view(-1)
@@ -176,7 +177,6 @@ def training_loop(train_dataloader, opts):
             d_optimizer.zero_grad()
             D_total_loss.backward()
             d_optimizer.step()
-
             # ==============================================================
             # TRAIN THE GENERATOR
             # ==============================================================
@@ -190,10 +190,10 @@ def training_loop(train_dataloader, opts):
             # 3. Generator loss: (D(G(z)) - 1)^2
             fake_images_processed = prepare_images(fake_images, opts)
             output = D.forward(fake_images_processed)
+            criterion = nn.MSELoss()
             scores = output.view(-1)
             ones = torch.ones_like(scores)
-            G_loss = torch.mean((scores - ones) ** 2)
-
+            G_loss = criterion(scores, ones)
 
             g_optimizer.zero_grad()
             G_loss.backward()

@@ -93,11 +93,11 @@ class DCDiscriminator(nn.Module):
 
     def __init__(self, conv_dim=64, norm='instance'):
         super().__init__()
-        self.conv1 = conv(in_channels=3,out_channels=32,kernel_size=4,norm='instance',activ='relu')
-        self.conv2 = conv(in_channels=32,out_channels=64,kernel_size=4,norm='instance',activ='relu')
-        self.conv3 = conv(in_channels=64,out_channels=128,kernel_size=4,norm='instance',activ='relu')
-        self.conv4 = conv(in_channels=128,out_channels=256,kernel_size=4,norm='instance',activ='relu')
-        self.conv5 = conv(in_channels=256,out_channels=1,kernel_size=4,norm=None)
+        self.conv1 = conv(in_channels=3, out_channels=32, kernel_size=4, norm='instance', activ='relu')
+        self.conv2 = conv(in_channels=32, out_channels=64, kernel_size=4, norm='instance', activ='relu')
+        self.conv3 = conv(in_channels=64, out_channels=128, kernel_size=4, norm='instance', activ='relu')
+        self.conv4 = conv(in_channels=128, out_channels=256, kernel_size=4, norm='instance', activ='relu')
+        self.conv5 = conv(in_channels=256, out_channels=1, kernel_size=4, norm=None)
 
     def forward(self, x):
         """
@@ -131,22 +131,25 @@ class DCGenerator(nn.Module):
         super().__init__()
 
         # ---------------------------------------------------------------
-        # TODO 1.3 – define the five up_conv layers.
-        #
         # Hint for up_conv1: you need to go from (noise_size x 1 x 1) to
         # (256 x 4 x 4) WITHOUT an upsample step.  Pass scale_factor=1
         # to up_conv and choose kernel_size and padding accordingly.
         # ---------------------------------------------------------------
 
-        self.up_conv1 = None
+        self.up_conv1 = up_conv(in_channels=100, out_channels=256, kernel_size=2, stride=1, padding=2, scale_factor=1,
+                                norm='instance', activ='relu')  # TODO verify
 
-        self.up_conv2 = None
+        self.up_conv2 = up_conv(in_channels=256, out_channels=128, kernel_size=3, stride=1, padding=1, scale_factor=2,
+                                norm='instance', activ='relu')
 
-        self.up_conv3 = None
+        self.up_conv3 = up_conv(in_channels=128, out_channels=64, kernel_size=3, stride=1, padding=1, scale_factor=2,
+                                norm='instance', activ='relu')
 
-        self.up_conv4 = None
+        self.up_conv4 = up_conv(in_channels=64, out_channels=32, kernel_size=3, stride=1, padding=1, scale_factor=2,
+                                norm='instance', activ='relu')
 
-        self.up_conv5 = None
+        self.up_conv5 = up_conv(in_channels=32, out_channels=3, kernel_size=3, stride=1, padding=1, scale_factor=2,
+                                norm=None, activ='tanh')
 
     def forward(self, z):
         """
@@ -158,10 +161,11 @@ class DCGenerator(nn.Module):
         ------
             out: (BS, channels, image_width, image_height)
         """
-        # ---------------------------------------------------------------
-        # TODO 1.3 – implement the forward pass.
-        # ---------------------------------------------------------------
-        pass
+        o1 = self.conv1(x)
+        o2 = self.conv2(o1)
+        o3 = self.conv3(o2)
+        o4 = self.conv4(o3)
+        return self.conv5(o4)
 
 
 # ---------------------------------------------------------------------------
@@ -264,8 +268,10 @@ class PatchDiscriminator(nn.Module):
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import torch
+
     x = torch.rand(4, 3, 64, 64)
     z = torch.rand(4, 100, 1, 1)
+
 
     def run_shape_test(name, build_fn, input_tensor, expected_shapes):
         print(f"=== {name} ===")
@@ -285,6 +291,7 @@ if __name__ == "__main__":
             print(f"not implemented: {e}")
         except Exception as e:
             print(f"failed: {type(e).__name__}: {e}")
+
 
     run_shape_test("PatchDiscriminator", PatchDiscriminator, x, {(4, 1, 4, 4)})
     print()

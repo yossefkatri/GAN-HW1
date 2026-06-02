@@ -113,12 +113,11 @@ def sample_noise(batch_size, dim):
 
 def prepare_images(images, opts):
     """Prepare images before they are passed to the discriminator.
-
-    TODO 1.5:
-    Complete this function according to the DiffAugment instructions
-    in the assignment.
     """
-    return images
+    if opts.use_diffaug:
+        return DiffAugment(x=images, policy=policy)
+    else:
+        return images
 
 
 # ---------------------------------------------------------------------------

@@ -93,10 +93,9 @@ def save_samples(G, fixed_noise, iteration, opts):
     path = os.path.join(opts.sample_dir, f'sample-{iteration:06d}.png')
     imageio.imwrite(path, grid)
     print(f'Saved {path}')
-
-    # ------------------------------------------------------------------
-    # TODO 1.6 – log the generated image grid to W&B.
-    # ------------------------------------------------------------------
+    wandb.log({
+        "generated_image_grid": wandb.Image(grid)
+    })
     pass
 
 
@@ -132,10 +131,14 @@ def training_loop(train_dataloader, opts):
 
     fixed_noise = sample_noise(opts.batch_size, opts.noise_size)
 
-    # ------------------------------------------------------------------
-    # TODO 1.6 – initialize a W&B run.
-    # Include the command-line options in the run config.
-    # ------------------------------------------------------------------
+    run_name = "dcgan"
+    if opts.use_diffaug:
+        run_name += "-diffaug"
+    run = wandb.init(
+        name=run_name,
+        project="assignment1-dcgan",
+        config=vars(opts)
+    )
 
     iteration = 1
     total_train_iters = opts.num_epochs * len(train_dataloader)
@@ -209,13 +212,12 @@ def training_loop(train_dataloader, opts):
                     f'D_fake: {D_fake_loss.item():.4f} | '
                     f'G: {G_loss.item():.4f}'
                 )
-
-                # ----------------------------------------------------------
-                # TODO 1.6 – log the scalar losses to W&B.
-                # Log the real/fake discriminator losses, total discriminator
-                # loss, and generator loss.
-                # ----------------------------------------------------------
-                pass
+                wandb.log({
+                    "D/real_loss": D_real_loss.item(),
+                    "D/fake_loss": D_fake_loss.item(),
+                    "D/total_loss": D_total_loss.item(),
+                    "G/loss": G_loss.item()
+                })
 
             if iteration % opts.sample_every == 0:
                 save_samples(G, fixed_noise, iteration, opts)
@@ -224,11 +226,7 @@ def training_loop(train_dataloader, opts):
                 checkpoint(iteration, G, D, opts)
 
             iteration += 1
-
-    # ------------------------------------------------------------------
-    # TODO 1.6 – finish the W&B run.
-    # ------------------------------------------------------------------
-    pass
+    wandb.finish()
 
 
 # ---------------------------------------------------------------------------

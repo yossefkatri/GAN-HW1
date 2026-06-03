@@ -48,8 +48,8 @@ def get_data_loader(data_path, opts):
            transforms.RandomHorizontalFlip()
         ])
         train_transform = transforms.Compose([
-        *basic_transform,
-        *additional_transform
+        *basic_transform.transforms,
+        *additional_transform.transforms,
         ])
 
     dataset = CustomDataSet(

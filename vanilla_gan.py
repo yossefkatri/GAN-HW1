@@ -67,7 +67,7 @@ def create_image_grid(array, ncols=None):
     for i in range(nrows):
         for j in range(ncols):
             result[i * cell_h:(i + 1) * cell_h,
-            j * cell_w:(j + 1) * cell_w, :] = \
+                   j * cell_w:(j + 1) * cell_w, :] = \
                 array[i * ncols + j].transpose(1, 2, 0)
     return result.squeeze() if channels == 1 else result
 
@@ -79,10 +79,12 @@ def checkpoint(iteration, G, D, opts):
                os.path.join(opts.checkpoint_dir, f'D_iter{iteration}.pkl'))
 
 
+
+
 def to_uint8_grid(images):
     """Convert (N, C, H, W) tensor/array with values in [-1,1] to uint8 grid."""
-    arr = utils.to_data(images)  # -> numpy (N, C, H, W)
-    grid = create_image_grid(arr)  # -> (H, W, C) in [-1, 1]
+    arr = utils.to_data(images)          # -> numpy (N, C, H, W)
+    grid = create_image_grid(arr)        # -> (H, W, C) in [-1, 1]
     return np.uint8(255 * (grid + 1) / 2)
 
 
@@ -124,6 +126,7 @@ def prepare_images(images, opts):
 # ---------------------------------------------------------------------------
 
 def training_loop(train_dataloader, opts):
+
     G, D = create_model(opts)
 
     g_optimizer = optim.Adam(G.parameters(), opts.lr, [opts.beta1, opts.beta2])
@@ -134,7 +137,7 @@ def training_loop(train_dataloader, opts):
     run_name = "dcgan"
     if opts.use_diffaug:
         run_name += "-diffaug"
-    run = wandb.init(
+    wandb.init(
         name=run_name,
         project="assignment1-dcgan",
         config=vars(opts)
@@ -142,6 +145,7 @@ def training_loop(train_dataloader, opts):
 
     iteration = 1
     total_train_iters = opts.num_epochs * len(train_dataloader)
+
     for _ in range(opts.num_epochs):
         for batch in train_dataloader:
 

@@ -136,8 +136,8 @@ class DCGenerator(nn.Module):
         # to up_conv and choose kernel_size and padding accordingly.
         # ---------------------------------------------------------------
 
-        self.up_conv1 = up_conv(in_channels=noise_size, out_channels=256, kernel_size=2, stride=1, padding=2, scale_factor=1,
-                                norm='instance', activ='relu')  # TODO verify
+        self.up_conv1 = up_conv(in_channels=noise_size, out_channels=256, kernel_size=4, stride=1, padding=3, scale_factor=1,
+                                norm='instance', activ='relu')
 
         self.up_conv2 = up_conv(in_channels=256, out_channels=128, kernel_size=3, stride=1, padding=1, scale_factor=2,
                                 norm='instance', activ='relu')

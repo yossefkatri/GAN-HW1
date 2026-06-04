@@ -189,24 +189,23 @@ class CycleGenerator(nn.Module):
     def __init__(self, conv_dim=64, init_zero_weights=False, norm='instance'):
         super().__init__()
 
-        # ---------------------------------------------------------------
-        # TODO 2.1 – define the encoder, transform, and decoder layers.
-        #
-        # Use conv() for the encoder, ResnetBlock for the transform
-        # (you can stack multiple with nn.Sequential), and up_conv()
-        # for the decoder.  Match the channel sizes in the docstring.
-        # ---------------------------------------------------------------
+        self.conv1 = conv(in_channels=3,  out_channels=32, kernel_size=4,
+                          norm=norm, activ='relu',
+                          init_zero_weights=init_zero_weights)
+        self.conv2 = conv(in_channels=32, out_channels=64, kernel_size=4,
+                          norm=norm, activ='relu',
+                          init_zero_weights=init_zero_weights)
 
-        # Encoder
-        self.conv1 = None
-        self.conv2 = None
+        self.resnet_block = nn.Sequential(
+            ResnetBlock(conv_dim=64, norm=norm, activ='relu'),
+            ResnetBlock(conv_dim=64, norm=norm, activ='relu'),
+            ResnetBlock(conv_dim=64, norm=norm, activ='relu'),
+        )
 
-        # Transform (3 residual blocks)
-        self.resnet_block = None
-
-        # Decoder
-        self.up_conv1 = None
-        self.up_conv2 = None
+        self.up_conv1 = up_conv(in_channels=64, out_channels=32,
+                                kernel_size=3, norm=norm, activ='relu')
+        self.up_conv2 = up_conv(in_channels=32, out_channels=3,
+                                kernel_size=3, norm=None, activ='tanh')
 
     def forward(self, x):
         """
@@ -218,10 +217,12 @@ class CycleGenerator(nn.Module):
         ------
             out: (BS, 3, 64, 64)
         """
-        # ---------------------------------------------------------------
-        # TODO 2.1 – pass x through encoder -> resnet_block -> decoder.
-        # ---------------------------------------------------------------
-        pass
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = self.resnet_block(out)
+        out = self.up_conv1(out)
+        out = self.up_conv2(out)
+        return out
 
 
 class PatchDiscriminator(nn.Module):
@@ -237,15 +238,11 @@ class PatchDiscriminator(nn.Module):
     def __init__(self, conv_dim=64, norm='instance'):
         super().__init__()
 
-        # ---------------------------------------------------------------
-        # TODO 2.2 – define the layers.
-        # Target output shape for a 64x64 input: (BS, 1, 4, 4).
-        # ---------------------------------------------------------------
-        self.conv1 = None
-        self.conv2 = None
-        self.conv3 = None
-        self.conv4 = None
-        self.conv5 = None
+        self.conv1 = conv(in_channels=3,   out_channels=32,  kernel_size=4, norm=norm, activ='relu')
+        self.conv2 = conv(in_channels=32,  out_channels=64,  kernel_size=4, norm=norm, activ='relu')
+        self.conv3 = conv(in_channels=64,  out_channels=128, kernel_size=4, norm=norm, activ='relu')
+        self.conv4 = conv(in_channels=128, out_channels=256, kernel_size=4, norm=norm, activ='relu')
+        self.conv5 = conv(in_channels=256, out_channels=1,   kernel_size=3, stride=1, padding=1, norm=None)
 
     def forward(self, x):
         """
@@ -257,10 +254,12 @@ class PatchDiscriminator(nn.Module):
         ------
             out: (BS, 1, 4, 4)  patch-level scores
         """
-        # ---------------------------------------------------------------
-        # TODO 2.2 – forward pass through your layers.
-        # ---------------------------------------------------------------
-        pass
+        out = self.conv1(x)
+        out = self.conv2(out)
+        out = self.conv3(out)
+        out = self.conv4(out)
+        out = self.conv5(out)
+        return out
 
 
 # ---------------------------------------------------------------------------
